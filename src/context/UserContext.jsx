@@ -7,36 +7,55 @@ function UserContext({ children }) {
   const [speaking, setSpeaking] = useState(false);
   const [prompt, setPrompt] = useState("Listening...");
 
-  // Function to speak text using Web Speech API
   function speak(text) {
     const text_speak = new SpeechSynthesisUtterance(text);
     text_speak.volume = 1;
     text_speak.rate = 1;
     text_speak.pitch = 1;
-    text_speak.lang = "hi-IN"; // Use "hi-IN" for Hindi (India), "hi-GB" is uncommon
+    text_speak.lang = "hi-IN";
     window.speechSynthesis.speak(text_speak);
   }
 
-  
-// Function to get AI response and speak it
   async function aiResponse(inputPrompt) {
     try {
-      const response = await run(inputPrompt);
+      const lowerPrompt = inputPrompt.toLowerCase();
 
-      // Clean and personalize the response
+      const socialLinks = {
+        youtube: "https://www.youtube.com",
+        instagram: "https://www.instagram.com",
+        facebook: "https://www.facebook.com",
+        twitter: "https://www.twitter.com",
+        x: "https://www.twitter.com",
+        whatsapp: "https://web.whatsapp.com",
+        linkedin: "https://www.linkedin.com",
+        gmail: "https://mail.google.com",
+      };
+
+      for (const key in socialLinks) {
+        if (
+          lowerPrompt.includes(`open ${key}`) ||
+          lowerPrompt.includes(`start ${key}`) ||
+          lowerPrompt.includes(`${key} kholo`)
+        ) {
+          speak(`Opening ${key}`);
+          window.open(socialLinks[key], "_blank");
+          setSpeaking(false);
+          return;
+        }
+      }
+
+      const response = await run(inputPrompt);
       const cleanedText = response
-        .replace(/\*\*/g, '')  // Remove bold markdown
-        .replace(/\*/g, '')    // Remove italics markdown
-        .replace(/google/gi, 'Ayush Ladumor'); // Replace all forms of "google"
+        .replace(/\*\*/g, "")
+        .replace(/\*/g, "")
+        .replace(/google/gi, "Ayush Ladumor");
 
       setPrompt(cleanedText);
       speak(cleanedText);
 
-      // Stop speaking state after 5 seconds
       setTimeout(() => {
         setSpeaking(false);
       }, 5000);
-
     } catch (error) {
       console.error("Error in aiResponse:", error);
       speak("Something went wrong while generating a response.");
@@ -44,10 +63,10 @@ function UserContext({ children }) {
     }
   }
 
-  // Setup Speech Recognition
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+  // 🎤 Setup speech recognition
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
 
   recognition.onresult = (e) => {
     const currentIndex = e.resultIndex;
@@ -56,19 +75,23 @@ function UserContext({ children }) {
     aiResponse(transcript);
   };
 
+  // 🛑 Add stop recognition function
+  function stopRecognition() {
+    recognition.stop();
+    setPrompt("Stopped Listening");
+    setSpeaking(false);
+  }
+
   const value = {
     recognition,
     speaking,
     setSpeaking,
     prompt,
     setPrompt,
+    stopRecognition, // ⬅ expose stop function
   };
 
-  return (
-    <datacontext.Provider value={value}>
-      {children}
-    </datacontext.Provider>
-  );
+  return <datacontext.Provider value={value}>{children}</datacontext.Provider>;
 }
 
 export default UserContext;
